@@ -2,23 +2,26 @@
 use levenshtein::levenshtein;
 
 pub trait Command {
-    fn matches(&self, str: &str) -> bool;
+    fn matches(&self, str: &str) -> bool {
+        str == self.to_str()
+    }
     #[cfg(feature="levenshtein")]
     fn distance(&self, str: &str) -> usize {
         levenshtein(self.to_str(), str)
     }
-    #[cfg(all(not(feature="levenshtein"), feature="distance"))]
+    #[cfg(not(feature="levenshtein"))]
     fn distance(&self, _: &str) -> usize {
         println!("distance not implemented for {}", self.to_str());
         usize::MAX
     }
     fn to_str(&self) -> &str;
-    fn exec(&self, args: &str);
+    fn exec(&self, args: &str) {
+        println!("{} invoked from: {:?}", self.to_str(), args);
+    }
 }
 
 pub enum MatchResult<'a> {
     Hit(&'a dyn Command),
-    #[cfg(feature="distance")]
     Near(&'a dyn Command, usize),
     Miss
 }
@@ -40,7 +43,6 @@ impl<'a> CommandMatcher<'a> {
     pub fn register(&mut self, command: &'a dyn Command) {
         self.commands.push(command);
     }
-    #[cfg(feature="distance")]
     pub fn find_match(&'a self, str: &str, max_distance: usize) -> MatchResult<'a> {
         let mut best_match = self.commands[0];
         let mut best_distance = best_match.distance(str);
@@ -59,15 +61,6 @@ impl<'a> CommandMatcher<'a> {
         } else {
             MatchResult::Miss
         }
-    }
-    #[cfg(not(feature="distance"))]
-    pub fn find_match(&'a self, str: &str) -> MatchResult<'a> {
-        for command in &self.commands {
-            if command.matches(str) {
-                return MatchResult::Hit(command);
-            }
-        }
-        MatchResult::Miss
     }
 }
 
