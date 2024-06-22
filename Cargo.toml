@@ -5,3 +5,8 @@ edition = "2021"
 
 [dependencies]
 levenshtein = "1.0.5"
+
+[features]
+default = ["levenshtein"]
+levenshtein = ["distance"]
+distance = []
